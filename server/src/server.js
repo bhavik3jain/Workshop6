@@ -6,22 +6,7 @@ var bodyParser = require('body-parser')
 
 // Creates an Express server.
 var app = express();
-
-app.use(bodyParser.text());
-// Defines what happens when it receives the `GET /` request
-app.get('/', function (req, res) {
-  res.send('Hello World!');
-});
-// Handle POST /reverse [data]
-app.post('/reverse', function (req, res) {
-  if (typeof(req.body) === 'string') {
-    var reversed = reverseString(req.body);
-    res.send(reversed);
-  }
-  else {
-    res.status(400).end()
-  }
-});
+app.use(express.static('../client/build'));
 
 // Starts the server on port 3000!
 app.listen(3000, function () {
