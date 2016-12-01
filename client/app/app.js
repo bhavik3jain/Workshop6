@@ -1,3 +1,4 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 import Feed from './components/feed';
@@ -9,10 +10,11 @@ import FeedItem from './components/feeditem';
 import {hideElement} from './util';
 import {searchForFeedItems, deleteFeedItem} from './server';
 import { IndexRoute, Router, Route, hashHistory } from 'react-router'
+import ErrorBanner from './components/errorbanner'
 
 /**
- * A fake profile page.
- */
+* A fake profile page.
+*/
 class ProfilePage extends React.Component {
   render() {
     return (
@@ -22,8 +24,8 @@ class ProfilePage extends React.Component {
 }
 
 /**
- * The Feed page. We created a new component just to fix the userId at 4.
- */
+* The Feed page. We created a new component just to fix the userId at 4.
+*/
 class FeedPage extends React.Component {
   render() {
     return <Feed user={4} />;
@@ -31,8 +33,8 @@ class FeedPage extends React.Component {
 }
 
 /**
- * Search results page.
- */
+* Search results page.
+*/
 class SearchResultsPage extends React.Component {
   getSearchTerm() {
     // If there's no query input to this page (e.g. /foo instead of /foo?bar=4),
@@ -47,7 +49,7 @@ class SearchResultsPage extends React.Component {
     }
     return searchTerm;
   }
-  
+
   render() {
     var searchTerm = this.getSearchTerm();
     // By using the searchTerm as the key, React will create a new
@@ -67,13 +69,13 @@ class SearchResults extends React.Component {
       results: []
     };
   }
-  
+
   deleteFeedItem(id) {
     deleteFeedItem(id, () => {
       this.refresh();
     });
   }
-  
+
   refresh() {
     var searchTerm = this.props.searchTerm;
     if (searchTerm !== "") {
@@ -90,11 +92,11 @@ class SearchResults extends React.Component {
       });
     }
   }
-  
+
   componentDidMount() {
     this.refresh();
   }
-  
+
   render() {
     return (
       <div>
@@ -118,11 +120,11 @@ class SearchResults extends React.Component {
 
 
 /**
- * The primary component in our application. Handles the overall layout
- * of the page.
- * The Router will give it different child Components as the user clicks
- * around the application.
- */
+* The primary component in our application. Handles the overall layout
+* of the page.
+* The Router will give it different child Components as the user clicks
+* around the application.
+*/
 class App extends React.Component {
   render() {
     // If there's no query input to this page (e.g. /foo instead of /foo?bar=4),
@@ -137,6 +139,11 @@ class App extends React.Component {
       <div>
         <NavBar searchTerm={searchTerm} />
         <div className="container">
+          <div className="row">
+            <div className="col-md-12">
+              <ErrorBanner />
+            </div>
+          </div>
           <div className="row">
             <div className="col-md-2 fb-left-sidebar">
               <LeftSideBar />
