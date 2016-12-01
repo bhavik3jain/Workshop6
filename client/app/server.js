@@ -1,6 +1,6 @@
 import {readDocument, writeDocument, addDocument, deleteDocument, getCollection} from './database.js';
 
-var token = 'eyJpZCI6NH0='; // <-- Put your base64'd JSON token here
+var token = 'eyJpZCI6NH0=';
 
 /**
 * Properly configure+send an XMLHttpRequest with error handling,
@@ -10,6 +10,7 @@ function sendXHR(verb, resource, body, cb) {
   var xhr = new XMLHttpRequest();
   xhr.open(verb, resource);
   xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+  // The below comment tells ESLint that FacebookError is a global.
   // Otherwise, ESLint would complain about it! (See what happens in Atom if
   // you remove the comment...)
   /* global FacebookError */
@@ -45,30 +46,31 @@ function sendXHR(verb, resource, body, cb) {
   });
   switch (typeof(body)) {
     case 'undefined':
-    // No body to send.
-    xhr.send();
-    break;
+      // No body to send.
+      xhr.send();
+      break;
     case 'string':
-    // Tell the server we are sending text.
-
-    xhr.setRequestHeader("Content-Type", "text/plain;charset=UTF-8");
-    xhr.send(body);
-    break;
+      // Tell the server we are sending text.
+      xhr.setRequestHeader("Content-Type", "text/plain;charset=UTF-8");
+      xhr.send(body);
+      break;
     case 'object':
-    // Tell the server we are sending JSON.
-    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-    // Convert body into a JSON string.
-    xhr.send(JSON.stringify(body));
-    break;
+      // Tell the server we are sending JSON.
+      xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+      // Convert body into a JSON string.
+      xhr.send(JSON.stringify(body));
+      break;
     default:
-    throw new Error('Unknown body type: ' + typeof(body));
+      throw new Error('Unknown body type: ' + typeof(body));
   }
 }
 
+
+
 /**
-* Emulates how a REST call is *asynchronous* -- it calls your function back
-* some time in the future with data.
-*/
+ * Emulates how a REST call is *asynchronous* -- it calls your function back
+ * some time in the future with data.
+ */
 function emulateServerReturn(data, cb) {
   setTimeout(() => {
     cb(data);
@@ -76,18 +78,15 @@ function emulateServerReturn(data, cb) {
 }
 
 /**
-* Resolves a feed item. Internal to the server, since it's synchronous.
-*/
+ * Resolves a feed item. Internal to the server, since it's synchronous.
+ */
 function getFeedItemSync(feedItemId) {
   var feedItem = readDocument('feedItems', feedItemId);
   // Resolve 'like' counter.
-  feedItem.likeCounter = feedItem.likeCounter.map((id) =>
-  readDocument('users', id));
-  // Assuming a StatusUpdate. If we had other types of
-  // FeedItems in the DB, we would
+  feedItem.likeCounter = feedItem.likeCounter.map((id) => readDocument('users', id));
+  // Assuming a StatusUpdate. If we had other types of FeedItems in the DB, we would
   // need to check the type and have logic for each type.
-  feedItem.contents.author = readDocument('users',
-  feedItem.contents.author);
+  feedItem.contents.author = readDocument('users', feedItem.contents.author);
   // Resolve comment author.
   feedItem.comments.forEach((comment) => {
     comment.author = readDocument('users', comment.author);
@@ -96,8 +95,8 @@ function getFeedItemSync(feedItemId) {
 }
 
 /**
-* Emulates a REST call to get the feed data for a particular user.
-*/
+ * Emulates a REST call to get the feed data for a particular user.
+ */
 export function getFeedData(user, cb) {
   // We don't need to send a body, so pass in 'undefined' for the body.
   sendXHR('GET', '/user/4/feed', undefined, (xhr) => {
@@ -107,49 +106,22 @@ export function getFeedData(user, cb) {
 }
 
 /**
-* Adds a new status update to the database.
-*/
+ * Adds a new status update to the database.
+ */
 export function postStatusUpdate(user, location, contents, cb) {
-  // If we were implementing this for real on an actual server, we would check
-  // that the user ID is correct & matches the authenticated user. But since
-  // we're mocking it, we can be less strict.
-
-  // Get the current UNIX time.
-  var time = new Date().getTime();
-  // The new status update. The database will assign the ID for us.
-  var newStatusUpdate = {
-    "likeCounter": [],
-    "type": "statusUpdate",
-    "contents": {
-      "author": user,
-      "postDate": time,
-      "location": location,
-      "contents": contents,
-      "likeCounter": []
-    },
-    // List of comments on the post
-    "comments": []
-  };
-
-  // Add the status update to the database.
-  // Returns the status update w/ an ID assigned.
-  newStatusUpdate = addDocument('feedItems', newStatusUpdate);
-
-  // Add the status update reference to the front of the current user's feed.
-  var userData = readDocument('users', user);
-  var feedData = readDocument('feeds', userData.feed);
-  feedData.contents.unshift(newStatusUpdate._id);
-
-  // Update the feed object.
-  writeDocument('feeds', feedData);
-
-  // Return the newly-posted object.
-  emulateServerReturn(newStatusUpdate, cb);
+  sendXHR('POST', '/feeditem', {
+    userId: user,
+    location: location,
+    contents: contents
+  }, (xhr) => {
+    // Return the new status update.
+    cb(JSON.parse(xhr.responseText));
+  });
 }
 
 /**
-* Adds a new comment to the database on the given feed item.
-*/
+ * Adds a new comment to the database on the given feed item.
+ */
 export function postComment(feedItemId, author, contents, cb) {
   var feedItem = readDocument('feedItems', feedItemId);
   feedItem.comments.push({
@@ -164,9 +136,9 @@ export function postComment(feedItemId, author, contents, cb) {
 }
 
 /**
-* Updates a feed item's likeCounter by adding the user to the likeCounter.
-* Provides an updated likeCounter in the response.
-*/
+ * Updates a feed item's likeCounter by adding the user to the likeCounter.
+ * Provides an updated likeCounter in the response.
+ */
 export function likeFeedItem(feedItemId, userId, cb) {
   var feedItem = readDocument('feedItems', feedItemId);
   // Normally, we would check if the user already liked this comment.
@@ -179,9 +151,9 @@ export function likeFeedItem(feedItemId, userId, cb) {
 }
 
 /**
-* Updates a feed item's likeCounter by removing the user from the likeCounter.
-* Provides an updated likeCounter in the response.
-*/
+ * Updates a feed item's likeCounter by removing the user from the likeCounter.
+ * Provides an updated likeCounter in the response.
+ */
 export function unlikeFeedItem(feedItemId, userId, cb) {
   var feedItem = readDocument('feedItems', feedItemId);
   // Find the array index that contains the user's ID.
@@ -199,8 +171,8 @@ export function unlikeFeedItem(feedItemId, userId, cb) {
 }
 
 /**
-* Adds a 'like' to a comment.
-*/
+ * Adds a 'like' to a comment.
+ */
 export function likeComment(feedItemId, commentIdx, userId, cb) {
   var feedItem = readDocument('feedItems', feedItemId);
   var comment = feedItem.comments[commentIdx];
@@ -211,8 +183,8 @@ export function likeComment(feedItemId, commentIdx, userId, cb) {
 }
 
 /**
-* Removes a 'like' from a comment.
-*/
+ * Removes a 'like' from a comment.
+ */
 export function unlikeComment(feedItemId, commentIdx, userId, cb) {
   var feedItem = readDocument('feedItems', feedItemId);
   var comment = feedItem.comments[commentIdx];
@@ -226,8 +198,8 @@ export function unlikeComment(feedItemId, commentIdx, userId, cb) {
 }
 
 /**
-* Updates the text in a feed item (assumes a status update)
-*/
+ * Updates the text in a feed item (assumes a status update)
+ */
 export function updateFeedItemText(feedItemId, newContent, cb) {
   var feedItem = readDocument('feedItems', feedItemId);
   // Update text content of update.
@@ -237,8 +209,8 @@ export function updateFeedItemText(feedItemId, newContent, cb) {
 }
 
 /**
-* Deletes a feed item.
-*/
+ * Deletes a feed item.
+ */
 export function deleteFeedItem(feedItemId, cb) {
   // Assumption: The current user authored this feed item.
   deleteDocument('feedItems', feedItemId);
@@ -263,8 +235,8 @@ export function deleteFeedItem(feedItemId, cb) {
 }
 
 /**
-* Searches for feed items with the given text.
-*/
+ * Searches for feed items with the given text.
+ */
 export function searchForFeedItems(userId, queryText, cb) {
   // trim() removes whitespace before and after the query.
   // toLowerCase() makes the query lowercase.
